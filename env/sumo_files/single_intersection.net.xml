@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<net version="1.9" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+    <location netOffset="100.00,100.00" convBoundary="0.00,0.00,200.00,200.00" origBoundary="-10000000000.00,-10000000000.00,10000000000.00,10000000000.00" projParameter="!"/>
+    
+    <!-- Traffic Light Logic Definition -->
+    <tlLogic id="TL" type="static" programID="0" offset="0">
+        <phase duration="31" state="Gr"/>  <!-- Green for WE, red for NS -->
+        <phase duration="4" state="yr"/>   <!-- Yellow for WE, red for NS -->
+        <phase duration="31" state="rG"/>  <!-- Red for WE, green for NS -->
+        <phase duration="4" state="ry"/>   <!-- Red for WE, yellow for NS -->
+    </tlLogic>
+    
+    <edge id=":TL_0" function="internal">
+        <lane id=":TL_0_0" index="0" speed="13.89" length="9.03" shape="95.20,107.40 95.20,98.37"/>
+    </edge>
+    <edge id=":TL_1" function="internal">
+        <lane id=":TL_1_0" index="0" speed="13.89" length="9.03" shape="107.40,104.80 98.37,104.80"/>
+    </edge>
+    <edge id="EW" from="E" to="TL" priority="1">
+        <lane id="EW_0" index="0" speed="13.89" length="92.60" shape="200.00,104.80 107.40,104.80"/>
+    </edge>
+    <edge id="NS" from="N" to="TL" priority="1">
+        <lane id="NS_0" index="0" speed="13.89" length="92.60" shape="95.20,200.00 95.20,107.40"/>
+    </edge>
+    <edge id="TLE" from="TL" to="E" priority="1">
+        <lane id="TLE_0" index="0" speed="13.89" length="92.60" shape="98.37,104.80 200.00,104.80"/>
+    </edge>
+    <edge id="TLS" from="TL" to="S" priority="1">
+        <lane id="TLS_0" index="0" speed="13.89" length="92.60" shape="95.20,98.37 95.20,0.00"/>
+    </edge>
+    <junction id="E" type="dead_end" x="200.00" y="100.00" incLanes="TLE_0" intLanes="" shape="200.00,100.00 200.00,103.20 200.00,100.00"/>
+    <junction id="N" type="dead_end" x="100.00" y="200.00" incLanes="" intLanes="" shape="100.00,200.00 96.80,200.00 100.00,200.00"/>
+    <junction id="S" type="dead_end" x="100.00" y="0.00" incLanes="TLS_0" intLanes="" shape="100.00,0.00 93.60,0.00 100.00,0.00"/>
+    <junction id="TL" type="traffic_light" x="100.00" y="100.00" incLanes="NS_0 EW_0" intLanes=":TL_0_0 :TL_1_0" shape="93.60,107.40 96.80,107.40 107.40,106.40 107.40,103.20 98.80,98.37 93.60,98.37">
+        <request index="0" response="00" foes="10" cont="0"/>
+        <request index="1" response="01" foes="01" cont="0"/>
+    </junction>
+    <connection from="EW" to="TLE" fromLane="0" toLane="0" via=":TL_1_0" tl="TL" linkIndex="1" dir="s" state="o"/>
+    <connection from="NS" to="TLS" fromLane="0" toLane="0" via=":TL_0_0" tl="TL" linkIndex="0" dir="s" state="o"/>
+    <connection from=":TL_0" to="TLS" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":TL_1" to="TLE" fromLane="0" toLane="0" dir="s" state="M"/>
+    </net>
+    

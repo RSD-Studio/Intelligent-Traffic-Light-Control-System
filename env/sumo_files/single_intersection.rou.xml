@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="standard_car" accel="2.6" decel="4.5" sigma="0.5" length="5" minGap="2.5" maxSpeed="15" color="1,1,0"/>
+    
+    <route id="WE_route" edges="EW TLE"/>
+    <route id="NS_route" edges="NS TLS"/>
+    </routes>
