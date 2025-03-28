@@ -216,7 +216,7 @@ class DQNAgent:
         self.optimizer.step()
         
         # Decay epsilon
-        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
+        # self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
         
         return loss.item()
     
