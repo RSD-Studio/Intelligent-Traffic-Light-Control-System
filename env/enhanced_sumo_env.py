@@ -77,6 +77,7 @@ class EnhancedSumoEnv(gym.Env):
         self.last_phase = 0
         self.vehicles_passed = 0
         self.total_switches = 0
+        self.swap_directions = False  # FIX 3: Track if directions are swapped this step
 
         # Reward weights (multi-objective)
         self.reward_weights = reward_weights or {
@@ -136,6 +137,12 @@ class EnhancedSumoEnv(gym.Env):
         x1 = sum(traci.lane.getLastStepVehicleNumber(lane) for lane in self.we_lanes)
         x2 = sum(traci.lane.getLastStepVehicleNumber(lane) for lane in self.ns_lanes)
 
+        # FIX 3: Randomize WE/NS ordering to reduce directional bias
+        # Randomly decide which direction to treat as "primary"
+        self.swap_directions = np.random.random() < 0.5
+        if self.swap_directions:
+            x1, x2 = x2, x1  # Swap the directions
+
         # Waiting times
         we_waiting_times = []
         ns_waiting_times = []
@@ -150,6 +157,11 @@ class EnhancedSumoEnv(gym.Env):
 
         avg_wait_we = np.mean(we_waiting_times) if we_waiting_times else 0
         avg_wait_ns = np.mean(ns_waiting_times) if ns_waiting_times else 0
+
+        # Apply direction swap for fairness in training (consistent with x1, x2 swap)
+        if self.swap_directions:
+            avg_wait_we, avg_wait_ns = avg_wait_ns, avg_wait_we
+
         max_wait = max([avg_wait_we, avg_wait_ns])
 
         # Speeds
@@ -166,6 +178,10 @@ class EnhancedSumoEnv(gym.Env):
 
         avg_speed_we = np.mean(we_speeds) if we_speeds else 0
         avg_speed_ns = np.mean(ns_speeds) if ns_speeds else 0
+
+        # Apply direction swap for fairness in training (consistent with x1, x2 swap)
+        if self.swap_directions:
+            avg_speed_we, avg_speed_ns = avg_speed_ns, avg_speed_we
 
         # Traffic light state
         tls_phase = traci.trafficlight.getPhase(self.tls_id)
@@ -186,8 +202,15 @@ class EnhancedSumoEnv(gym.Env):
             queue_trend_we = 0
             queue_trend_ns = 0
 
-        # Update history
-        self.queue_history.append((x1, x2))
+        # Apply direction swap for consistency
+        if self.swap_directions:
+            queue_trend_we, queue_trend_ns = queue_trend_ns, queue_trend_we
+
+        # Update history (store original, unswapped values for next step calculation)
+        # Get original x1, x2 before swap for history
+        x1_original = sum(traci.lane.getLastStepVehicleNumber(lane) for lane in self.we_lanes)
+        x2_original = sum(traci.lane.getLastStepVehicleNumber(lane) for lane in self.ns_lanes)
+        self.queue_history.append((x1_original, x2_original))
         self.waiting_time_history.append((avg_wait_we, avg_wait_ns))
 
         # Construct 15-dimensional state vector
@@ -238,8 +261,11 @@ class EnhancedSumoEnv(gym.Env):
         # 3. Throughput reward (number of vehicles that completed their journey)
         throughput_reward = self._get_vehicles_completed() * 10
 
-        # 4. Fairness penalty (penalize imbalance)
-        fairness_penalty = -abs(avg_wait_we - avg_wait_ns)
+        # 4. Fairness penalty (FIX 2: penalize both waiting time AND queue length imbalance)
+        # This ensures the agent doesn't hold one direction green with 10x more vehicles
+        waiting_time_imbalance = abs(avg_wait_we - avg_wait_ns)
+        queue_length_imbalance = abs(x1 - x2)
+        fairness_penalty = -(waiting_time_imbalance + 0.5 * queue_length_imbalance)
 
         # 5. Switch penalty (discourage frequent switching)
         switch_penalty = -10 if action == 1 else 0
@@ -353,7 +379,13 @@ class EnhancedSumoEnv(gym.Env):
             'total_throughput': 0
         }
 
-        # Generate initial vehicles
+        # FIX 1: Randomize initial phase to eliminate WE bias
+        # Phase 0 = WE green, Phase 2 = NS green
+        random_initial_phase = np.random.choice([0, 2])
+        traci.trafficlight.setPhase(self.tls_id, random_initial_phase)
+        self.last_phase = random_initial_phase
+
+        # Generate initial vehicles (balanced)
         self._generate_vehicles(self.base_arrival_rate)
 
         # Get initial state
@@ -362,13 +394,18 @@ class EnhancedSumoEnv(gym.Env):
         return state
 
     def _generate_vehicles(self, arrival_rate):
-        """Generate vehicles with given arrival probability"""
+        """Generate vehicles with given arrival probability (FIX 4: Balanced between directions)"""
+        # FIX 4: Use Poisson process to ensure balanced vehicle generation
+        # This prevents random imbalances like WE getting 3 vehicles while NS gets 0
+        num_vehicles_we = np.random.poisson(arrival_rate)
+        num_vehicles_ns = np.random.poisson(arrival_rate)
+
         # West-East direction
-        if np.random.random() < arrival_rate:
+        for _ in range(num_vehicles_we):
             self._add_vehicle(self.we_lanes[0], 'WE')
 
         # North-South direction
-        if np.random.random() < arrival_rate:
+        for _ in range(num_vehicles_ns):
             self._add_vehicle(self.ns_lanes[0], 'NS')
 
     def _add_vehicle(self, lane, direction):
