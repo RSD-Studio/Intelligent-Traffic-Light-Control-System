@@ -524,6 +524,44 @@ class ImprovedDQNAgent:
     def load_model(self, filepath):
         """Load model checkpoint"""
         checkpoint = torch.load(filepath, map_location=self.device)
+
+        # Load configuration if available and recreate networks with correct architecture
+        if 'config' in checkpoint:
+            config = checkpoint['config']
+            # Recreate networks with the saved configuration
+            if config.get('use_lstm', False):
+                self.q_network = LSTMQNetwork(
+                    config['state_size'],
+                    config['action_size'],
+                    self.hidden_size
+                ).to(self.device)
+                self.target_network = LSTMQNetwork(
+                    config['state_size'],
+                    config['action_size'],
+                    self.hidden_size
+                ).to(self.device)
+            else:
+                self.q_network = DuelingQNetwork(
+                    config['state_size'],
+                    config['action_size'],
+                    self.hidden_size,
+                    use_noisy=config.get('use_noisy', True),
+                    use_batch_norm=True
+                ).to(self.device)
+                self.target_network = DuelingQNetwork(
+                    config['state_size'],
+                    config['action_size'],
+                    self.hidden_size,
+                    use_noisy=config.get('use_noisy', True),
+                    use_batch_norm=True
+                ).to(self.device)
+
+            # Update agent config
+            self.use_noisy = config.get('use_noisy', True)
+            self.use_double_dqn = config.get('use_double_dqn', True)
+            self.use_dueling = config.get('use_dueling', True)
+            self.use_lstm = config.get('use_lstm', False)
+
         self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
         self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
