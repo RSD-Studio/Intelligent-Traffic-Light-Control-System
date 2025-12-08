@@ -7,7 +7,9 @@ import os
 import sys
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
+from datetime import datetime
 
 from env.sumo_env import create_sumo_files
 from env.enhanced_sumo_env import EnhancedSumoEnv
@@ -170,6 +172,145 @@ def test_mode(args):
     print(f"Average Waiting Time: {np.mean(all_waiting_times):.2f}s ± {np.std(all_waiting_times):.2f}s")
     print(f"Average Throughput: {np.mean(all_throughputs):.1f} ± {np.std(all_throughputs):.1f}")
     print("=" * 70)
+
+    # Save test results and visualizations
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    results_dir = f"results/test_{timestamp}"
+    os.makedirs(f"{results_dir}/plots", exist_ok=True)
+
+    # Create comprehensive test visualization
+    fig, axes = plt.subplots(2, 3, figsize=(16, 10))
+    fig.suptitle('Test Results Summary', fontsize=16, fontweight='bold')
+
+    # Plot 1: Episode Rewards
+    axes[0, 0].plot(all_rewards, 'b-', linewidth=2)
+    axes[0, 0].set_xlabel('Episode')
+    axes[0, 0].set_ylabel('Total Reward')
+    axes[0, 0].set_title('Episode Rewards')
+    axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].axhline(y=np.mean(all_rewards), color='r', linestyle='--', label=f'Mean: {np.mean(all_rewards):.2f}')
+    axes[0, 0].legend()
+
+    # Plot 2: Average Queue Length per Episode
+    axes[0, 1].plot(all_queues, 'g-', linewidth=2)
+    axes[0, 1].set_xlabel('Episode')
+    axes[0, 1].set_ylabel('Avg Queue Length')
+    axes[0, 1].set_title('Average Queue Length per Episode')
+    axes[0, 1].grid(True, alpha=0.3)
+    axes[0, 1].axhline(y=np.mean(all_queues), color='r', linestyle='--', label=f'Mean: {np.mean(all_queues):.2f}')
+    axes[0, 1].legend()
+
+    # Plot 3: Average Waiting Time per Episode
+    axes[0, 2].plot(all_waiting_times, 'orange', linewidth=2)
+    axes[0, 2].set_xlabel('Episode')
+    axes[0, 2].set_ylabel('Avg Waiting Time (s)')
+    axes[0, 2].set_title('Average Waiting Time per Episode')
+    axes[0, 2].grid(True, alpha=0.3)
+    axes[0, 2].axhline(y=np.mean(all_waiting_times), color='r', linestyle='--', label=f'Mean: {np.mean(all_waiting_times):.2f}s')
+    axes[0, 2].legend()
+
+    # Plot 4: Reward Distribution
+    axes[1, 0].hist(all_rewards, bins=10, color='skyblue', edgecolor='black', alpha=0.7)
+    axes[1, 0].axvline(x=np.mean(all_rewards), color='r', linestyle='--', linewidth=2, label=f'Mean: {np.mean(all_rewards):.2f}')
+    axes[1, 0].set_xlabel('Reward')
+    axes[1, 0].set_ylabel('Frequency')
+    axes[1, 0].set_title('Reward Distribution')
+    axes[1, 0].legend()
+    axes[1, 0].grid(True, alpha=0.3, axis='y')
+
+    # Plot 5: Queue Length Distribution
+    axes[1, 1].hist(all_queues, bins=10, color='lightgreen', edgecolor='black', alpha=0.7)
+    axes[1, 1].axvline(x=np.mean(all_queues), color='r', linestyle='--', linewidth=2, label=f'Mean: {np.mean(all_queues):.2f}')
+    axes[1, 1].set_xlabel('Queue Length')
+    axes[1, 1].set_ylabel('Frequency')
+    axes[1, 1].set_title('Queue Length Distribution')
+    axes[1, 1].legend()
+    axes[1, 1].grid(True, alpha=0.3, axis='y')
+
+    # Plot 6: Waiting Time Distribution
+    axes[1, 2].hist(all_waiting_times, bins=10, color='lightyellow', edgecolor='black', alpha=0.7)
+    axes[1, 2].axvline(x=np.mean(all_waiting_times), color='r', linestyle='--', linewidth=2, label=f'Mean: {np.mean(all_waiting_times):.2f}s')
+    axes[1, 2].set_xlabel('Waiting Time (s)')
+    axes[1, 2].set_ylabel('Frequency')
+    axes[1, 2].set_title('Waiting Time Distribution')
+    axes[1, 2].legend()
+    axes[1, 2].grid(True, alpha=0.3, axis='y')
+
+    plt.tight_layout()
+    test_summary_path = f"{results_dir}/plots/test_summary.png"
+    plt.savefig(test_summary_path, dpi=150, bbox_inches='tight')
+    print(f"\n✓ Test summary saved to: {test_summary_path}")
+
+    # Save individual metric plots
+    fig2, axes2 = plt.subplots(1, 3, figsize=(15, 4))
+
+    # Smoothed rewards plot
+    window_size = max(1, len(all_rewards) // 5)
+    smoothed_rewards = np.convolve(all_rewards, np.ones(window_size)/window_size, mode='valid')
+    axes2[0].plot(all_rewards, 'b-', alpha=0.5, label='Raw Rewards')
+    axes2[0].plot(range(window_size-1, len(all_rewards)), smoothed_rewards, 'r-', linewidth=2, label='Smoothed')
+    axes2[0].set_xlabel('Episode')
+    axes2[0].set_ylabel('Reward')
+    axes2[0].set_title('Rewards (Raw vs Smoothed)')
+    axes2[0].legend()
+    axes2[0].grid(True, alpha=0.3)
+
+    # Queue length trend
+    axes2[1].plot(all_queues, 'g-', linewidth=2)
+    axes2[1].fill_between(range(len(all_queues)), all_queues, alpha=0.3)
+    axes2[1].set_xlabel('Episode')
+    axes2[1].set_ylabel('Avg Queue Length')
+    axes2[1].set_title('Queue Length Trend')
+    axes2[1].grid(True, alpha=0.3)
+
+    # Throughput trend
+    axes2[2].plot(all_throughputs, 'purple', linewidth=2)
+    axes2[2].fill_between(range(len(all_throughputs)), all_throughputs, alpha=0.3, color='purple')
+    axes2[2].set_xlabel('Episode')
+    axes2[2].set_ylabel('Throughput (vehicles)')
+    axes2[2].set_title('Vehicle Throughput Trend')
+    axes2[2].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    trends_path = f"{results_dir}/plots/test_trends.png"
+    plt.savefig(trends_path, dpi=150, bbox_inches='tight')
+    print(f"✓ Test trends saved to: {trends_path}")
+
+    # Save results as CSV
+    import csv
+    csv_path = f"{results_dir}/test_results.csv"
+    with open(csv_path, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Episode', 'Reward', 'Avg_Queue', 'Avg_Wait_Time', 'Throughput'])
+        for i, (r, q, w, t) in enumerate(zip(all_rewards, all_queues, all_waiting_times, all_throughputs)):
+            writer.writerow([i+1, f'{r:.2f}', f'{q:.2f}', f'{w:.2f}', t])
+    print(f"✓ Test results CSV saved to: {csv_path}")
+
+    # Save summary statistics
+    summary_path = f"{results_dir}/test_summary.txt"
+    with open(summary_path, 'w') as f:
+        f.write("TEST RESULTS SUMMARY\n")
+        f.write("=" * 70 + "\n")
+        f.write(f"Test Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Model: {args.model_path}\n")
+        f.write(f"Test Episodes: {args.test_episodes}\n")
+        f.write(f"Max Steps: {args.max_steps}\n")
+        f.write(f"Arrival Rate: {args.arrival_rate}\n")
+        f.write("\n" + "=" * 70 + "\n")
+        f.write(f"Average Reward: {np.mean(all_rewards):.2f} ± {np.std(all_rewards):.2f}\n")
+        f.write(f"Average Queue Length: {np.mean(all_queues):.2f} ± {np.std(all_queues):.2f}\n")
+        f.write(f"Average Waiting Time: {np.mean(all_waiting_times):.2f}s ± {np.std(all_waiting_times):.2f}s\n")
+        f.write(f"Average Throughput: {np.mean(all_throughputs):.1f} ± {np.std(all_throughputs):.1f}\n")
+        f.write(f"\nMin Queue: {np.min(all_queues):.2f}\n")
+        f.write(f"Max Queue: {np.max(all_queues):.2f}\n")
+        f.write(f"Min Reward: {np.min(all_rewards):.2f}\n")
+        f.write(f"Max Reward: {np.max(all_rewards):.2f}\n")
+    print(f"✓ Test summary text saved to: {summary_path}")
+
+    print(f"\n✓ All test results saved to: {results_dir}/")
+    print(f"  - Plots: {results_dir}/plots/")
+    print(f"  - CSV: {csv_path}")
+    print(f"  - Summary: {summary_path}\n")
 
 
 def optimize_mode(args):
