@@ -162,7 +162,6 @@ def test_mode(args):
     env.close()
 
     # Print summary statistics
-    import numpy as np
     print("\n" + "=" * 70)
     print("TEST RESULTS SUMMARY")
     print("=" * 70)
