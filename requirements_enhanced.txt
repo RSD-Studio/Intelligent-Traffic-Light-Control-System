@@ -1,0 +1,53 @@
+# Enhanced Requirements for Intelligent Traffic Light Control System
+# Install with: pip install -r requirements_enhanced.txt
+
+# Core Deep Learning
+torch>=1.8.0
+torchvision>=0.9.0
+
+# SUMO Traffic Simulator
+# Note: SUMO must be installed separately from https://sumo.dlr.de/
+# Set SUMO_HOME environment variable after installation
+
+# Reinforcement Learning
+gym>=0.18.0
+numpy>=1.19.0
+
+# Data Processing and Visualization
+pandas>=1.2.0
+matplotlib>=3.3.0
+seaborn>=0.11.0
+
+# TensorBoard for Training Visualization
+tensorboard>=2.4.0
+
+# Hyperparameter Optimization
+optuna>=2.10.0
+joblib>=1.0.0
+
+# Model Compression
+# PyTorch includes quantization support
+
+# Utilities
+scikit-learn>=0.24.0
+scipy>=1.6.0
+tqdm>=4.60.0
+
+# Optional: For parallel training (advanced)
+ray[rllib]>=1.9.0  # Uncomment if using distributed training
+
+# Development Tools
+pytest>=6.2.0
+black>=21.0
+flake8>=3.9.0
+
+# Visualization Tools
+plotly>=4.14.0  # Interactive plots
+Pillow>=8.0.0  # Image processing for animations
+
+# JSON handling
+json5>=0.9.0
+
+# Additional utilities
+python-dateutil>=2.8.0
+pytz>=2021.1
