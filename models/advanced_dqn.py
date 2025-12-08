@@ -562,6 +562,9 @@ class ImprovedDQNAgent:
             self.use_dueling = config.get('use_dueling', True)
             self.use_lstm = config.get('use_lstm', False)
 
+            # Recreate optimizer with new network parameters
+            self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
+
         self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
         self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
