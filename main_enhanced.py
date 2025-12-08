@@ -6,6 +6,7 @@ Supports all advanced features and improvements
 import os
 import sys
 import argparse
+import numpy as np
 import torch
 
 from env.sumo_env import create_sumo_files
@@ -294,7 +295,6 @@ def main():
         train_mode(args)
 
     elif args.mode == 'test':
-        import numpy as np
         test_mode(args)
 
     elif args.mode == 'optimize':
