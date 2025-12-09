@@ -131,12 +131,16 @@ def test_mode(args):
     all_queues = []
     all_waiting_times = []
     all_throughputs = []
+    all_queue_we = []  # WE direction queue lengths over time
+    all_queue_ns = []  # NS direction queue lengths over time
 
     for episode in range(args.test_episodes):
         state = env.reset()
         episode_reward = 0
         episode_queue = []
         episode_wait = []
+        episode_queue_we = []
+        episode_queue_ns = []
 
         for step in range(args.max_steps):
             action = agent.get_action(state, training=False)
@@ -146,6 +150,8 @@ def test_mode(args):
             episode_reward += reward
             episode_queue.append(info['total_queue'])
             episode_wait.append(info['avg_waiting_time'])
+            episode_queue_we.append(info['queue_length_we'])
+            episode_queue_ns.append(info['queue_length_ns'])
 
             if done:
                 break
@@ -154,6 +160,8 @@ def test_mode(args):
         all_queues.append(np.mean(episode_queue))
         all_waiting_times.append(np.mean(episode_wait))
         all_throughputs.append(env.vehicles_passed)
+        all_queue_we.append(episode_queue_we)
+        all_queue_ns.append(episode_queue_ns)
 
         print(f"Episode {episode+1}/{args.test_episodes} - "
               f"Reward: {episode_reward:.1f}, "
@@ -275,6 +283,56 @@ def test_mode(args):
     trends_path = f"{results_dir}/plots/test_trends.png"
     plt.savefig(trends_path, dpi=150, bbox_inches='tight')
     print(f"✓ Test trends saved to: {trends_path}")
+
+    # Create directional queue visualization (WE vs NS over steps)
+    fig3, axes3 = plt.subplots(1, 2, figsize=(14, 5))
+    fig3.suptitle('Queue Lengths by Direction (Average over Episodes)', fontsize=14, fontweight='bold')
+
+    # Pad all episodes to the same length with their last value for alignment
+    max_steps = max(max(len(q) for q in all_queue_we), max(len(q) for q in all_queue_ns))
+
+    # Average queue lengths across episodes at each step
+    avg_queue_we_steps = []
+    avg_queue_ns_steps = []
+
+    for step_idx in range(max_steps):
+        we_values = []
+        ns_values = []
+        for episode_idx in range(len(all_queue_we)):
+            if step_idx < len(all_queue_we[episode_idx]):
+                we_values.append(all_queue_we[episode_idx][step_idx])
+            if step_idx < len(all_queue_ns[episode_idx]):
+                ns_values.append(all_queue_ns[episode_idx][step_idx])
+
+        if we_values:
+            avg_queue_we_steps.append(np.mean(we_values))
+        if ns_values:
+            avg_queue_ns_steps.append(np.mean(ns_values))
+
+    # Plot WE direction
+    axes3[0].plot(avg_queue_we_steps, 'b-', linewidth=2, label='WE Direction')
+    axes3[0].fill_between(range(len(avg_queue_we_steps)), avg_queue_we_steps, alpha=0.3)
+    axes3[0].set_xlabel('Step')
+    axes3[0].set_ylabel('Queue Length')
+    axes3[0].set_title('WE Direction Queue Length Over Steps')
+    axes3[0].grid(True, alpha=0.3)
+    axes3[0].axhline(y=np.mean(avg_queue_we_steps), color='r', linestyle='--', label=f'Mean: {np.mean(avg_queue_we_steps):.2f}')
+    axes3[0].legend()
+
+    # Plot NS direction
+    axes3[1].plot(avg_queue_ns_steps, 'g-', linewidth=2, label='NS Direction')
+    axes3[1].fill_between(range(len(avg_queue_ns_steps)), avg_queue_ns_steps, alpha=0.3, color='green')
+    axes3[1].set_xlabel('Step')
+    axes3[1].set_ylabel('Queue Length')
+    axes3[1].set_title('NS Direction Queue Length Over Steps')
+    axes3[1].grid(True, alpha=0.3)
+    axes3[1].axhline(y=np.mean(avg_queue_ns_steps), color='r', linestyle='--', label=f'Mean: {np.mean(avg_queue_ns_steps):.2f}')
+    axes3[1].legend()
+
+    plt.tight_layout()
+    directional_path = f"{results_dir}/plots/queue_by_direction.png"
+    plt.savefig(directional_path, dpi=150, bbox_inches='tight')
+    print(f"✓ Directional queue plot saved to: {directional_path}")
 
     # Save results as CSV
     import csv
