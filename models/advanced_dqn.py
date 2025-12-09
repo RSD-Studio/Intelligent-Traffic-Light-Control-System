@@ -528,30 +528,33 @@ class ImprovedDQNAgent:
         # Load configuration if available and recreate networks with correct architecture
         if 'config' in checkpoint:
             config = checkpoint['config']
+            # Use hidden_size from checkpoint, or fall back to self.hidden_size
+            checkpoint_hidden_size = config.get('hidden_size', self.hidden_size)
+
             # Recreate networks with the saved configuration
             if config.get('use_lstm', False):
                 self.q_network = LSTMQNetwork(
                     config['state_size'],
                     config['action_size'],
-                    self.hidden_size
+                    checkpoint_hidden_size
                 ).to(self.device)
                 self.target_network = LSTMQNetwork(
                     config['state_size'],
                     config['action_size'],
-                    self.hidden_size
+                    checkpoint_hidden_size
                 ).to(self.device)
             else:
                 self.q_network = DuelingQNetwork(
                     config['state_size'],
                     config['action_size'],
-                    self.hidden_size,
+                    checkpoint_hidden_size,
                     use_noisy=config.get('use_noisy', True),
                     use_batch_norm=True
                 ).to(self.device)
                 self.target_network = DuelingQNetwork(
                     config['state_size'],
                     config['action_size'],
-                    self.hidden_size,
+                    checkpoint_hidden_size,
                     use_noisy=config.get('use_noisy', True),
                     use_batch_norm=True
                 ).to(self.device)
